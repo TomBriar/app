@@ -1,109 +1,113 @@
 use crate::error::Error;
-use std::fs::File;
-use std::io::Read;
-use image::io::Reader as ImageReader;
+use std::{cmp, mem};
+use std::collections::{HashMap, HashSet, BinaryHeap};
 use either::*;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Entry {
 	pub byte: u8,
 	pub encoding: String
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 struct Leaf {
 	byte: u8,
-	weight: u32
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 struct Node {
-	left: Box<Either<Self, Leaf>>,
-	right: Box<Either<Self, Leaf>>,
-	weight: u32
+	left: Box<Either<Leaf, Self>>,
+	right: Box<Either<Leaf, Self>>,
 }
 
 
 impl Node {
-	fn new(left: Either<Node, Leaf>, right: Either<Node, Leaf>) -> Node {
+	fn new(left: Either<Leaf, Node>, right: Either<Leaf, Node>) -> Node {
 		Node {
 			left: Box::new(left.clone()),
 			right: Box::new(right.clone()),
-			weight: left.either(|l| l.weight, |r| r.weight) + right.either(|l| l.weight, |r| r.weight)
 		}
 	}
 }
 
-pub fn generate_huffman_table(bytes: &[u8]) -> Vec<Entry> {
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+struct Weighted<T> {
+	node: T,
+	weight: u32,
+}
+// Reverse ordering on weight
+impl<T: cmp::Ord + Eq> cmp::Ord for Weighted<T> {
+	fn cmp(&self, other: &Self) -> cmp::Ordering {
+		self.weight
+			.cmp(&other.weight)
+			.reverse()
+			.then(self.node.cmp(&other.node))
+	}
+}
+impl<T: cmp::Ord + Eq> cmp::PartialOrd for Weighted<T> {
+	fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> { Some(self.cmp(other)) }
+}
+impl<T> Weighted<T> {
+	/// Construct a new `Weighted` with a given weight
+	fn new(node: T, weight: u32) -> Weighted<T> { Weighted { node, weight } }
+}
+
+pub fn generate_huffman_table(bytes: &[u8]) -> HashSet<Entry> {
 	// Early-return on empty table
 	if bytes.is_empty() {
-		return vec![];
+		return HashSet::new();
 	}
 
-	let mut sorted_bytes = bytes.to_vec();
-	sorted_bytes.sort_unstable();
+	// Count occurrence of each bye
+	let mut weights = HashMap::with_capacity(cmp::min(256, bytes.len()));
+	for byte in bytes {
+		*weights.entry(*byte).or_insert(0) += 1;
+	}
+	let weights = weights; // prevent further mutation
 
-	let mut database: Vec<Either<Node, Leaf>> = Vec::new();
-	let mut current_byte = sorted_bytes[0];
-	let mut current_count = 0;
-
-	for byte in sorted_bytes {
-		if byte == current_byte {
-			current_count += 1;
-		} else {
-			database.push(Right(Leaf {
-				byte: current_byte,
-				weight: current_count
-			}));
-			current_byte = byte;
-			current_count = 1;
-		}
+	// Put them into a heap ordered by height
+	let mut heap: BinaryHeap<Weighted<Either<Leaf, Node>>> = BinaryHeap::new();
+	for (byte, weight) in weights {
+		heap.push(Weighted::new(Left(Leaf { byte }), weight));
 	}
 
-	database.push(Right(Leaf {
-		byte: current_byte,
-		weight: current_count
-	}));
-
-	database.sort_unstable_by_key(|e| e.as_ref().either(|l| l.weight, |r| r.weight));
-
-	loop {
-		assert_ne!(database.len(), 0);
-		if database.len() == 1 {
-			break
+	// Combine highest-weighted nodes until only one is left
+	assert!(!heap.is_empty());
+	while heap.len() > 1 {
+		// unwraps are safe since our loop condition guarantees >= 2 elements
+		let mut first = heap.pop().unwrap();
+		let mut second = heap.pop().unwrap();
+		// Make `first` always <= `second`
+		if first > second {
+			mem::swap(&mut first, &mut second);
 		}
-		let first = &database[0];
-		let second = &database[1];
-		let node = if first.as_ref().either(|l| l.weight, |r| r.weight) >= second.as_ref().either(|l| l.weight, |r| r.weight) {
-			Node::new(first.clone(), second.clone())
-		} else {
-			Node::new(second.clone(), first.clone())
-		};
-		database.remove(1);
-		database.remove(0);
-		database.push(Left(node));
-		database.sort_unstable_by_key(|e| e.as_ref().either(|l| l.weight, |r| r.weight));
+		// Combine and reinsert
+		heap.push(Weighted::new(
+			Right(Node::new(first.node, second.node)),
+			first.weight + second.weight,
+		));
 	}
-	let tree = database[0].clone();
+	assert_eq!(heap.len(), 1);
+	let tree = heap.pop().unwrap().node;
 
-	fn decode_node(e: Either<Node, Leaf>, current_path: String) -> Vec<Entry> {
-		let mut huffman_table = Vec::new();
-		if e.is_left() {
-			let node = e.unwrap_left();
-			huffman_table.extend(decode_node(*node.left, current_path.clone()+"0"));
-			huffman_table.extend(decode_node(*node.right, current_path+"1"));
-		} else {
-			let leaf = e.unwrap_right();
-			huffman_table.push(Entry{
-				byte: leaf.byte,
-				encoding: current_path
-			})
+	fn decode_node(e: Either<Leaf, Node>, current_path: String) -> HashSet<Entry> {
+		let mut huffman_table = HashSet::new();
+		match e {
+			Right(node) => {
+				huffman_table.extend(decode_node(*node.right, current_path.clone()+"1"));
+				huffman_table.extend(decode_node(*node.left, current_path.clone()+"0"));
+			},
+			Left(leaf) => {
+				huffman_table.insert(Entry{
+					byte: leaf.byte,
+					encoding: current_path
+				});
+			},
 		}
-		huffman_table.sort_unstable_by_key(|e| e.encoding.len());
 		huffman_table
 	}
 
-	decode_node(tree, "".to_string())
+	decode_node(tree, "".to_string()).into_iter().collect()
 }
 
 pub fn serilize_huffman_table(huffman_table: &[Entry], ht_info: u8) -> Result<Vec<u8>, Error> {
@@ -205,43 +209,41 @@ pub fn huffman_decode(huffman_table: &[Entry], data: &[u8]) -> Result<Vec<u8>, E
 mod tests {
     use super::*;
 
+    macro_rules! set {
+        ($($ch:expr => $s:expr),*) => (
+            {
+                let mut set = HashSet::new();
+                $(set.insert(Entry { byte: $ch, encoding: $s.into() });)*
+                set
+            }
+        );
+    }
+
     #[test]
     fn huffman_basic() {
-        assert_eq!(generate_huffman_table(&[]), vec![]);
+        assert_eq!(generate_huffman_table(&[]), HashSet::new());
+        assert_eq!(
+            generate_huffman_table(b"A"),
+            set!(b'A' => ""),
+        );
+
         assert_eq!(
             generate_huffman_table(b"ABCD"),
-            vec![
-                Entry { byte: b'A', encoding: "00".into() },
-                Entry { byte: b'B', encoding: "01".into() },
-                Entry { byte: b'C', encoding: "10".into() },
-                Entry { byte: b'D', encoding: "11".into() },
-            ],
+            set!(b'A' => "00", b'B' => "01", b'C' => "10", b'D' => "11"),
         );
 
         assert_eq!(
             generate_huffman_table(b"AACD"),
-            vec![
-                Entry { byte: b'A', encoding: "0".into() },
-                Entry { byte: b'C', encoding: "10".into() },
-                Entry { byte: b'D', encoding: "11".into() },
-            ],
+            set!(b'A' => "0", b'C' => "10", b'D' => "11"),
         );
 
         assert_eq!(
             generate_huffman_table(b"ACCD"),
-            vec![
-                Entry { byte: b'C', encoding: "0".into() },
-                Entry { byte: b'A', encoding: "10".into() },
-                Entry { byte: b'D', encoding: "11".into() },
-            ],
+            set!(b'C' => "0", b'A' => "10", b'D' => "11"),
         );
         assert_eq!(
             generate_huffman_table(b"DACC"),
-            vec![
-                Entry { byte: b'C', encoding: "0".into() },
-                Entry { byte: b'A', encoding: "10".into() },
-                Entry { byte: b'D', encoding: "11".into() },
-            ],
+            set!(b'C' => "0", b'A' => "10", b'D' => "11"),
         );
 
     }
