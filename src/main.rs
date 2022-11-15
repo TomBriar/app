@@ -1,3 +1,7 @@
+
+// Temporary allowances to eliminate warnings
+#![allow(unused_imports)]
+
 extern crate app;
 extern crate bitcoincore_rpc;
 

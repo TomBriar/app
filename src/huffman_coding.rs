@@ -16,15 +16,6 @@ struct Leaf {
 	weight: u32
 }
 
-impl Leaf {
-	fn new() -> Leaf {
-		Leaf {
-			byte: 0,
-			weight: 0
-		}
-	}
-}
-
 #[derive(Debug, Clone)]
 struct Node {
 	left: Box<Either<Self, Leaf>>,
@@ -160,7 +151,7 @@ pub fn huffman_encode(bytes: &Vec<u8>, huffman_table: &Vec<Entry>) -> Result<(us
 		if index+8 > length {
 			println!("over fill");
 			let mut byte_string = encoded[index..length].to_string();
-			for i in byte_string.len()..8 {
+			for _ in byte_string.len()..8 {
 				byte_string += "0";
 			}
 			result.push(u8::from_str_radix(&byte_string, 2).unwrap());
@@ -182,9 +173,9 @@ pub fn deserilize_huffman_table(serilized_huffman_table: &Vec<u8>) -> Result<(Ve
 	let mut encoding = 0;
 	let mut index = 0;
 	for i in 0..symbol_count.len() {
-		for x in 0..symbol_count[i] {
+		for _ in 0..symbol_count[i] {
 			let mut int = format!("{:b}", encoding);
-			for y in int.len()..i {
+			for _ in int.len()..i {
 				int = "0".to_string()+&int;
 			}
 			println!("byte = {}, encode = {}", symbols[index], format!("{:b}", encoding));
@@ -203,6 +194,7 @@ pub fn deserilize_huffman_table(serilized_huffman_table: &Vec<u8>) -> Result<(Ve
 	Ok((huffman_table, *ht_info))
 }
 
+#[allow(unused_variables)]
 pub fn huffman_decode(huffman_table: &Vec<Entry>, data: &Vec<u8>) -> Result<Vec<u8>, Error> {
 	Ok([0].to_vec())
 }
