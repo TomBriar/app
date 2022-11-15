@@ -79,24 +79,26 @@ pub fn generate_huffman_table(bytes: &[u8]) -> HashSet<Entry> {
 	assert_eq!(heap.len(), 1);
 	let tree = heap.pop().unwrap().node;
 
-	fn decode_node(e: &Node, current_path: String) -> HashSet<Entry> {
-		let mut huffman_table = HashSet::new();
-		match e {
-			Node::Leaf { ref byte } => {
+        // Iterate through tree to define encoding
+	let mut huffman_table = HashSet::with_capacity(cmp::min(256, bytes.len()));
+	let mut node_stack = vec![(tree, "".to_string())];
+	loop {
+		match node_stack.pop() {
+			None => break,
+			Some((Node::Leaf { byte }, current_path)) => {
 				huffman_table.insert(Entry{
-					byte: *byte,
+					byte: byte,
 					encoding: current_path
 				});
 			},
-			Node::Internal { ref left, ref right } => {
-				huffman_table.extend(decode_node(left, current_path.clone()+"0"));
-				huffman_table.extend(decode_node(right, current_path+"1"));
+			Some((Node::Internal { left, right }, current_path)) => {
+				node_stack.push((*left, current_path.clone() + "0"));
+				node_stack.push((*right, current_path.clone() + "1"));
 			},
 		}
-		huffman_table
 	}
 
-	decode_node(&tree, "".to_string()).into_iter().collect()
+	huffman_table
 }
 
 pub fn serilize_huffman_table(huffman_table: &[Entry], ht_info: u8) -> Result<Vec<u8>, Error> {
