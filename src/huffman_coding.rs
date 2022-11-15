@@ -34,10 +34,10 @@ impl Node {
 	}
 }
 
-pub fn generate_huffman_table(bytes: &[u8]) -> Result<Vec<Entry>, Error> {
+pub fn generate_huffman_table(bytes: &[u8]) -> Vec<Entry> {
 	// Early-return on empty table
 	if bytes.is_empty() {
-		return Ok(vec![]);
+		return vec![];
 	}
 
 	let mut sorted_bytes = bytes.to_vec();
@@ -103,9 +103,7 @@ pub fn generate_huffman_table(bytes: &[u8]) -> Result<Vec<Entry>, Error> {
 		huffman_table
 	}
 
-	let huffman_table: Vec<Entry> = decode_node(tree, "".to_string());
-
-	Ok(huffman_table)
+	decode_node(tree, "".to_string())
 }
 
 pub fn serilize_huffman_table(huffman_table: &[Entry], ht_info: u8) -> Result<Vec<u8>, Error> {
@@ -209,7 +207,42 @@ mod tests {
 
     #[test]
     fn huffman_basic() {
-        assert_eq!(generate_huffman_table(&[]).unwrap(), vec![]);
+        assert_eq!(generate_huffman_table(&[]), vec![]);
+        assert_eq!(
+            generate_huffman_table(b"ABCD"),
+            vec![
+                Entry { byte: b'A', encoding: "00".into() },
+                Entry { byte: b'B', encoding: "01".into() },
+                Entry { byte: b'C', encoding: "10".into() },
+                Entry { byte: b'D', encoding: "11".into() },
+            ],
+        );
+
+        assert_eq!(
+            generate_huffman_table(b"AACD"),
+            vec![
+                Entry { byte: b'A', encoding: "0".into() },
+                Entry { byte: b'C', encoding: "10".into() },
+                Entry { byte: b'D', encoding: "11".into() },
+            ],
+        );
+
+        assert_eq!(
+            generate_huffman_table(b"ACCD"),
+            vec![
+                Entry { byte: b'C', encoding: "0".into() },
+                Entry { byte: b'A', encoding: "10".into() },
+                Entry { byte: b'D', encoding: "11".into() },
+            ],
+        );
+        assert_eq!(
+            generate_huffman_table(b"DACC"),
+            vec![
+                Entry { byte: b'C', encoding: "0".into() },
+                Entry { byte: b'A', encoding: "10".into() },
+                Entry { byte: b'D', encoding: "11".into() },
+            ],
+        );
 
     }
 }
