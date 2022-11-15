@@ -24,13 +24,15 @@ struct Weighted<T> {
 	node: T,
 	weight: u32,
 }
-// Reverse ordering on weight
+// Sort by weight, then by node. Reverse the order because we're going
+// to use this with a `BinaryHeap`, which inexplicably is a max-heap
+// even though you almost always want a min-heap.
 impl<T: cmp::Ord + Eq> cmp::Ord for Weighted<T> {
 	fn cmp(&self, other: &Self) -> cmp::Ordering {
 		self.weight
 			.cmp(&other.weight)
-			.reverse()
 			.then(self.node.cmp(&other.node))
+			.reverse()
 	}
 }
 impl<T: cmp::Ord + Eq> cmp::PartialOrd for Weighted<T> {
@@ -66,8 +68,10 @@ pub fn generate_huffman_table(bytes: &[u8]) -> HashSet<Entry> {
 		// unwraps are safe since our loop condition guarantees >= 2 elements
 		let mut first = heap.pop().unwrap();
 		let mut second = heap.pop().unwrap();
-		// Make `first` always <= `second`
-		if first > second {
+
+		// Make `first` always >= `second`. (Remembering that we're in
+                // backwards-heap-land where ">=" means "<="
+		if first < second {
 			mem::swap(&mut first, &mut second);
 		}
 		// Combine and reinsert
