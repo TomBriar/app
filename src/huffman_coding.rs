@@ -35,6 +35,10 @@ impl Node {
 }
 
 pub fn generate_huffman_table(bytes: &[u8]) -> Result<Vec<Entry>, Error> {
+	// Early-return on empty table
+	if bytes.is_empty() {
+		return Ok(vec![]);
+	}
 
 	let mut sorted_bytes = bytes.to_vec();
 	sorted_bytes.sort_unstable();
@@ -198,3 +202,15 @@ pub fn deserilize_huffman_table(serilized_huffman_table: &[u8]) -> Result<(Vec<E
 pub fn huffman_decode(huffman_table: &[Entry], data: &[u8]) -> Result<Vec<u8>, Error> {
 	Ok([0].to_vec())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn huffman_basic() {
+        assert_eq!(generate_huffman_table(&[]).unwrap(), vec![]);
+
+    }
+}
+
