@@ -41,7 +41,7 @@ fn pretty_unwrap<T>(msg: &str, res: Result<T, Error>) -> T {
 }
 
 pub fn main() {
-	// pretty_unwrap("compressing image", compress_image("/home/a/Downloads/dog.jpeg".to_string()));
+	pretty_unwrap("compressing image", compress_image("/home/a/Downloads/dog.jpeg".to_string()));
 	// let mut bytes: Vec<u8> = Vec::new();
 	// bytes.push(243);
 	// bytes.push(243);
@@ -149,9 +149,9 @@ pub fn main() {
 		//tr
 		// let txr = "02000000000101f36f35b933bb1a136a0633585f2a70ab1877716bbcc46b0c04b4651fb134f68b0100000000ffffffff01a861000000000000160014ef28d520689aceb00b7c0264d97e505ece5fa2120140bbc1b94d6ba49f5f2c9c9ed7ef43f264ea60f6f107c2686d23f04d9cdc24608b190d43fc76f30afe4bf43cc45ca26ef109f7404cab5d5c761d874b3d757b355500000000".to_string();
 		//p2pkh
-		let txr = "02000000010f7bb3af0aa10954a7fa555f78d058314e5869fa4c774bf4bdde41f153028c42010000006a473044022043145852fcdf1296680d764c161d6e24d1b4e4ad4ca1fd44f8fdd2ae7c8d2ecb022028e41a87ee6b39e38e57e8ee45f029678a8856b5139c78e77ffbbdd4d5f491fa0121038e0bfb625d7ef6182d653a7787f56f161a25c8e974186e9027b72bca8a569f1fffffffff01a861000000000000160014733154bc73b07fa0576b2a29a747753be1d0e8d800000000".to_string();
+		// let txr = "02000000010f7bb3af0aa10954a7fa555f78d058314e5869fa4c774bf4bdde41f153028c42010000006a473044022043145852fcdf1296680d764c161d6e24d1b4e4ad4ca1fd44f8fdd2ae7c8d2ecb022028e41a87ee6b39e38e57e8ee45f029678a8856b5139c78e77ffbbdd4d5f491fa0121038e0bfb625d7ef6182d653a7787f56f161a25c8e974186e9027b72bca8a569f1fffffffff01a861000000000000160014733154bc73b07fa0576b2a29a747753be1d0e8d800000000".to_string();
 		// let txr = "01000000017afcd3403a2ee93dacdeda9802e42da8bb4e5e95223de3fc1ef2733f540786553f0000008b483045022100e6c21f3771ceb926cdeefa3784a0ddeba44089e731b536a560a7fda21d05bc31022061f8d8bf049966fe6a61ea8cfd0930d4e71229b39b1e48aa59c9471dd2233668014104350214d331d5947e8e9c6d937684385ff8e28d8055374704f26b8bdbd3c44d74ffd6af88865d350011c1255ddcdff416439e3a46b93b3fd463b906ff236beec0ffffffff02e6d50700000000001976a91453dce6052e05d0296ebc4c83bd24d0b108affc7988ac03d80000000000001976a91436bb1b3763fb824a23d84b163c9d0a060a79090388ac00000000".to_string();
-		pretty_unwrap("Compressing Transaction", compress_transaction(&txr, &rpc));
+		// pretty_unwrap("Compressing Transaction", compress_transaction(&txr, &rpc));
 		// use std::str::FromStr;
 		// let public_key = "02350214d331d5947e8e9c6d937684385ff8e28d8055374704f26b8bdbd3c44d74".to_string();
 		// let bpk: bitcoin::PublicKey = bitcoin::PublicKey::from_str(&public_key).expect("Parse Public Key");

@@ -261,7 +261,11 @@ fn get_witness_script(transa: &Transaction,  rpc: &bitcoincore_rpc::Client, reco
 				//Theory: Will always be true due to the sig being used, If using the original signature it will only work for the true pubkey
 				assert!(ctx.verify_ecdsa(&message, &sig, &pubkey).is_ok());
 				let bpk = bitcoin::PublicKey::new(public_key);
+				let uncompressed_bpk = bitcoin::PublicKey::new_uncompressed(public_key);
 				println!("bpk = {}", bpk);
+				println!("uc bpk = {}", uncompressed_bpk);
+				let scpk_uc = bitcoin::util::address::Address::p2pkh(&uncompressed_bpk, Network::Bitcoin).script_pubkey();
+				println!("uc_scpk = {}", scpk_uc);
 				let scpk1 = bitcoin::util::address::Address::p2pkh(&bpk, Network::Bitcoin).script_pubkey();
 				println!("bpkh = {}", bpk.pubkey_hash());
 				let scpk = Script::new_p2pkh(&bpk.pubkey_hash());

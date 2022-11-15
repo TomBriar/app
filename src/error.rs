@@ -21,7 +21,7 @@ pub enum Error {
     BKE(bitcoin::util::key::Error),
     STDIOError(std::io::Error),
     ImageError(image::ImageError),
-    TurboJPEGError(turbojpeg::Error),
+    // TurboJPEGError(turbojpeg::Error),
     #[cfg(feature="gui")]
     Iced(iced::Error),
     NoTxOut,
@@ -109,11 +109,11 @@ impl From<image::ImageError> for Error {
     }
 }
 
-impl From<turbojpeg::Error> for Error {
-    fn from(e: turbojpeg::Error) -> Error {
-        Error::TurboJPEGError(e)
-    }
-}
+// impl From<turbojpeg::Error> for Error {
+//     fn from(e: turbojpeg::Error) -> Error {
+//         Error::TurboJPEGError(e)
+//     }
+// }
 
 
 
@@ -152,7 +152,7 @@ impl fmt::Display for Error {
             Error::SchnorrSigError(ref e) => fmt::Display::fmt(e, f),
             Error::STDIOError(ref e) => fmt::Display::fmt(e, f),
             Error::ImageError(ref e) => fmt::Display::fmt(e, f),
-            Error::TurboJPEGError(ref e) => fmt::Display::fmt(e, f),
+            // Error::TurboJPEGError(ref e) => fmt::Display::fmt(e, f),
             #[cfg(feature="gui")]
             Error::Iced(ref e) => fmt::Display::fmt(e, f),
             Error::NoTxOut => f.write_str("No TxOut Found, Either Spent or Coinbase Transaction"),
