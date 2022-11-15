@@ -231,7 +231,7 @@ fn get_witness_script(transa: &Transaction,  rpc: &bitcoincore_rpc::Client, reco
 				}
 			};
 			println!("signature = {}", signature);
-			println!("compact = {}", hex::encode(signature.serialize_compact().to_vec()));
+			println!("compact = {}", hex::encode(signature.serialize_compact()));
 			println!("public_key = {}", public_key);
 			println!("recoverable_signatures[{}] = {}", i, hex::encode(recoverable_signatures[i]));
 

@@ -5,6 +5,9 @@
 // #![deny(unused_mut)]
 // #![deny(missing_docs)]
 
+// Temporary allowances to eliminate warnings
+#![allow(unused_imports)]
+
 extern crate bitcoin;
 extern crate hex;
 extern crate secp256k1;
