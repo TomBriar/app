@@ -1,7 +1,6 @@
 use crate::error::Error;
 use std::{cmp, mem};
 use std::collections::{HashMap, HashSet, BinaryHeap};
-use either::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Entry {
@@ -10,24 +9,14 @@ pub struct Entry {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-struct Leaf {
-	byte: u8,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-struct Node {
-	left: Box<Either<Leaf, Self>>,
-	right: Box<Either<Leaf, Self>>,
-}
-
-
-impl Node {
-	fn new(left: Either<Leaf, Node>, right: Either<Leaf, Node>) -> Node {
-		Node {
-			left: Box::new(left.clone()),
-			right: Box::new(right.clone()),
-		}
-	}
+enum Node {
+	Leaf {
+		byte: u8,
+	},
+	Internal {
+		left: Box<Self>,
+		right: Box<Self>,
+	},
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -66,9 +55,9 @@ pub fn generate_huffman_table(bytes: &[u8]) -> HashSet<Entry> {
 	let weights = weights; // prevent further mutation
 
 	// Put them into a heap ordered by height
-	let mut heap: BinaryHeap<Weighted<Either<Leaf, Node>>> = BinaryHeap::new();
+	let mut heap: BinaryHeap<Weighted<Node>> = BinaryHeap::new();
 	for (byte, weight) in weights {
-		heap.push(Weighted::new(Left(Leaf { byte }), weight));
+		heap.push(Weighted::new(Node::Leaf { byte }, weight));
 	}
 
 	// Combine highest-weighted nodes until only one is left
@@ -83,31 +72,31 @@ pub fn generate_huffman_table(bytes: &[u8]) -> HashSet<Entry> {
 		}
 		// Combine and reinsert
 		heap.push(Weighted::new(
-			Right(Node::new(first.node, second.node)),
+			Node::Internal { left: Box::new(first.node), right: Box::new(second.node) },
 			first.weight + second.weight,
 		));
 	}
 	assert_eq!(heap.len(), 1);
 	let tree = heap.pop().unwrap().node;
 
-	fn decode_node(e: Either<Leaf, Node>, current_path: String) -> HashSet<Entry> {
+	fn decode_node(e: &Node, current_path: String) -> HashSet<Entry> {
 		let mut huffman_table = HashSet::new();
 		match e {
-			Right(node) => {
-				huffman_table.extend(decode_node(*node.right, current_path.clone()+"1"));
-				huffman_table.extend(decode_node(*node.left, current_path.clone()+"0"));
-			},
-			Left(leaf) => {
+			Node::Leaf { ref byte } => {
 				huffman_table.insert(Entry{
-					byte: leaf.byte,
+					byte: *byte,
 					encoding: current_path
 				});
+			},
+			Node::Internal { ref left, ref right } => {
+				huffman_table.extend(decode_node(left, current_path.clone()+"0"));
+				huffman_table.extend(decode_node(right, current_path+"1"));
 			},
 		}
 		huffman_table
 	}
 
-	decode_node(tree, "".to_string()).into_iter().collect()
+	decode_node(&tree, "".to_string()).into_iter().collect()
 }
 
 pub fn serilize_huffman_table(huffman_table: &[Entry], ht_info: u8) -> Result<Vec<u8>, Error> {
