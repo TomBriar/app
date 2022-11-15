@@ -4,7 +4,7 @@ use std::io::Read;
 use image::io::Reader as ImageReader;
 use either::*;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Entry {
 	pub byte: u8,
 	pub encoding: String
@@ -34,9 +34,9 @@ impl Node {
 	}
 }
 
-pub fn generate_huffman_table(bytes: &Vec<u8>) -> Result<Vec<Entry>, Error> {
+pub fn generate_huffman_table(bytes: &[u8]) -> Result<Vec<Entry>, Error> {
 
-	let mut sorted_bytes = bytes.clone();
+	let mut sorted_bytes = bytes.to_vec();
 	sorted_bytes.sort_unstable();
 
 	let mut database: Vec<Either<Node, Leaf>> = Vec::new();
@@ -64,7 +64,7 @@ pub fn generate_huffman_table(bytes: &Vec<u8>) -> Result<Vec<Entry>, Error> {
 	database.sort_unstable_by_key(|e| e.as_ref().either(|l| l.weight, |r| r.weight));
 
 	loop {
-		assert!(database.len() >= 1);
+		assert_ne!(database.len(), 0);
 		if database.len() == 1 {
 			break
 		}
@@ -87,7 +87,7 @@ pub fn generate_huffman_table(bytes: &Vec<u8>) -> Result<Vec<Entry>, Error> {
 		if e.is_left() {
 			let node = e.unwrap_left();
 			huffman_table.extend(decode_node(*node.left, current_path.clone()+"0"));
-			huffman_table.extend(decode_node(*node.right, current_path.clone()+"1"));
+			huffman_table.extend(decode_node(*node.right, current_path+"1"));
 		} else {
 			let leaf = e.unwrap_right();
 			huffman_table.push(Entry{
@@ -96,7 +96,7 @@ pub fn generate_huffman_table(bytes: &Vec<u8>) -> Result<Vec<Entry>, Error> {
 			})
 		}
 		huffman_table.sort_unstable_by_key(|e| e.encoding.len());
-		return huffman_table
+		huffman_table
 	}
 
 	let huffman_table: Vec<Entry> = decode_node(tree, "".to_string());
@@ -104,8 +104,8 @@ pub fn generate_huffman_table(bytes: &Vec<u8>) -> Result<Vec<Entry>, Error> {
 	Ok(huffman_table)
 }
 
-pub fn serilize_huffman_table(huffman_table: &Vec<Entry>, ht_info: u8) -> Result<Vec<u8>, Error> {
-	let mut sorted_huffman_table = huffman_table.clone();
+pub fn serilize_huffman_table(huffman_table: &[Entry], ht_info: u8) -> Result<Vec<u8>, Error> {
+	let mut sorted_huffman_table = huffman_table.to_vec();
 	sorted_huffman_table.sort_unstable_by_key(|e| e.encoding.len());
 	let mut huffman_symbol_count: Vec<u8> = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].to_vec();
 	let mut symbols: Vec<u8> = Vec::new();
@@ -126,7 +126,7 @@ pub fn serilize_huffman_table(huffman_table: &Vec<Entry>, ht_info: u8) -> Result
 	Ok(result)
 }
 
-pub fn huffman_encode(bytes: &Vec<u8>, huffman_table: &Vec<Entry>) -> Result<(usize, Vec<u8>), Error> {
+pub fn huffman_encode(bytes: &[u8], huffman_table: &[Entry]) -> Result<(usize, Vec<u8>), Error> {
 	let mut encoded = String::new();
 	for byte in bytes {
 		for entry in huffman_table {
@@ -145,7 +145,7 @@ pub fn huffman_encode(bytes: &Vec<u8>, huffman_table: &Vec<Entry>) -> Result<(us
 			println!("push");
 			let byte_string = &encoded[index..index+8];
 			
-			result.push(u8::from_str_radix(&byte_string, 2).unwrap())
+			result.push(u8::from_str_radix(byte_string, 2).unwrap())
 		}
 		index += 8;
 		if index+8 > length {
@@ -162,7 +162,7 @@ pub fn huffman_encode(bytes: &Vec<u8>, huffman_table: &Vec<Entry>) -> Result<(us
 }
 
 
-pub fn deserilize_huffman_table(serilized_huffman_table: &Vec<u8>) -> Result<(Vec<Entry>, u8), Error> {
+pub fn deserilize_huffman_table(serilized_huffman_table: &[u8]) -> Result<(Vec<Entry>, u8), Error> {
 	if serilized_huffman_table[0] != 0xff || serilized_huffman_table[1] != 0xc4 {
 		return Err(Error::UnParsableHuffmanTable)
 	}
@@ -172,13 +172,13 @@ pub fn deserilize_huffman_table(serilized_huffman_table: &Vec<u8>) -> Result<(Ve
 	let mut huffman_table = Vec::new();
 	let mut encoding = 0;
 	let mut index = 0;
-	for i in 0..symbol_count.len() {
-		for _ in 0..symbol_count[i] {
+        for (i, symbol) in symbol_count.iter().copied().enumerate() {
+		for _ in 0..symbol {
 			let mut int = format!("{:b}", encoding);
 			for _ in int.len()..i {
 				int = "0".to_string()+&int;
 			}
-			println!("byte = {}, encode = {}", symbols[index], format!("{:b}", encoding));
+			println!("byte = {}, encode = {:b}", symbols[index], encoding);
 			huffman_table.push(Entry{
 				byte: symbols[index],
 				encoding: int
@@ -186,7 +186,7 @@ pub fn deserilize_huffman_table(serilized_huffman_table: &Vec<u8>) -> Result<(Ve
 			encoding += 1;
 			index += 1;
 		}
-		if symbol_count[i] > 0 {
+		if symbol > 0 {
 			encoding += 1;
 			encoding *= 2;
 		}
@@ -195,6 +195,6 @@ pub fn deserilize_huffman_table(serilized_huffman_table: &Vec<u8>) -> Result<(Ve
 }
 
 #[allow(unused_variables)]
-pub fn huffman_decode(huffman_table: &Vec<Entry>, data: &Vec<u8>) -> Result<Vec<u8>, Error> {
+pub fn huffman_decode(huffman_table: &[Entry], data: &[u8]) -> Result<Vec<u8>, Error> {
 	Ok([0].to_vec())
 }
