@@ -357,7 +357,20 @@ pub fn compress_image(image_name: String) -> Result<String, Error> {
 
 
 
+	use std::io;
+use std::io::prelude::*;
 
+fn pause() {
+    let mut stdin = io::stdin();
+    let mut stdout = io::stdout();
+
+    // We want the cursor to stay at the end of the line, so we print without a newline and flush manually.
+    write!(stdout, "Press any key to continue...").unwrap();
+    stdout.flush().unwrap();
+
+    // Read a single byte and discard
+    let _ = stdin.read(&mut [0u8]).unwrap();
+}
 
 
 
@@ -403,39 +416,59 @@ pub fn compress_image(image_name: String) -> Result<String, Error> {
 	// 	*index.lock().unwrap() += 1;
 	// 	0.0
 	// }));
-	println!("org dog");
-	let img = ImageReader::open("/home/a/Documents/originalDog.jpeg")?.decode()?;
-	let mut buffer = File::create("/home/a/app/dog4.jpeg")?;
-	let mut jpeg_encoder = JpegEncoder::new_with_quality(buffer, 100);
-	let index: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
-	let values: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
-	jpeg_encoder.encode(img.as_bytes(), img.width(), img.height(), image::ColorType::Rgb8, Some(&|p, c| {
-		values.lock().unwrap().push(c);
-		*index.lock().unwrap() += 1;
-		p.round()
-	}));
+
+	// use image::{RgbImage, Rgb};
+	// use rand::Rng;
+
+
+	// let a = 8;
+	// let b = 8;
+	// let mut img = RgbImage::new(a, b);
+	// for x in 0..a {
+	// 	for y in 0..b {
+	// 		let mut rng = rand::thread_rng();
+ //    		let g: u8 = rng.gen();
+	// 		// println!("g = {}", g);
+	// 		img.put_pixel(x, y, Rgb([200, g, 100]));
+	// 	}
+	// }
 	
 
-	println!("------------------------------------------------------");
-	let img = ImageReader::open("/home/a/app/dog4.jpeg")?.decode()?;
-	let mut buffer = File::create("/home/a/app/dog5.jpeg")?;
+
+
+
+	let img = ImageReader::open("/home/a/app/dog5.jpeg")?.decode()?;
+	let mut buffer = File::create("/home/a/app/dog6.jpeg")?;
 	let mut jpeg_encoder = JpegEncoder::new_with_quality(buffer, 100);
 	let index: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
-	let valuex: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
-	jpeg_encoder.encode(img.as_bytes(), img.width(), img.height(), image::ColorType::Rgb8, Some(&|p, c| {
-		*index.lock().unwrap() += 1;
-		valuex.lock().unwrap().push(c);
-		p.round()
-	}));
+	let values: Arc<Mutex<Vec<f32>>> = Arc::new(Mutex::new(Vec::new()));
+	jpeg_encoder.encode(img.as_bytes(), img.width(), img.height(), image::ColorType::Rgb8, None);
+	
 
-	let v1 = values.lock().unwrap().clone();
-	let v2 = valuex.lock().unwrap().clone();
-	for i in 0..v1.len() {
-		if v1[i] != v2[i] {
-			println!("v1[{}] = {}, v2[{}] = {}", i, v1[i], i, v2[i]);
-			panic!("NEQ");
-		}
-	}
+	pause();
+	println!("------------------------------------------------------");
+	// use std::io::BufReader;
+	// use image::io::Reader;
+	// let reader = Reader::open("/home/a/app/dog5.jpeg")?;
+	// println!("reader.format = {}", reader.format().unwrap() == image::ImageFormat::Jpeg);
+	let img = ImageReader::open("/home/a/app/dog6.jpeg")?.decode()?;
+	let mut buffer = File::create("/home/a/app/dog7.jpeg")?;
+	let mut jpeg_encoder = JpegEncoder::new_with_quality(buffer, 100);
+	let index: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
+	let valuex: Arc<Mutex<Vec<f32>>> = Arc::new(Mutex::new(Vec::new()));
+	jpeg_encoder.encode(img.as_bytes(), img.width(), img.height(), image::ColorType::Rgb8, None);
+
+	// let v1 = values.lock().unwrap().clone();
+	// let v2 = valuex.lock().unwrap().clone();
+	// let mut True = 0;
+	// for i in 0..v1.len() {
+	// 	if v1[i] == v2[i] {
+	// 		// println!("v1[{}] = {}, v2[{}] = {}", i, v1[i], i, v2[i]);
+	// 		// panic!("NEQ");
+	// 		True += 1
+	// 	}
+	// }
+	// println!("DTC COEEFS = {}/{}", True, v1.len());
 
 	// let mut test = 0;
 
@@ -565,14 +598,14 @@ pub fn compress_image(image_name: String) -> Result<String, Error> {
 	// let mut buffer = File::create("/home/a/app/dog6.jpeg")?;
 	// let mut jpeg_encoder = JpegEncoder::new_with_quality(buffer, 100);
 	// jpeg_encoder.encode(img.as_bytes(), img.width(), img.height(), image::ColorType::Rgb8, None);
-
+	println!("-----------------------");
 	let mut images = Vec::new();
-	images.push(("0", ImageReader::open("/home/a/Documents/originalDog.jpeg")?.decode()?));
-	images.push(("1", ImageReader::open("/home/a/app/dog4.jpeg")?.decode()?));
-	images.push(("2", ImageReader::open("/home/a/app/dog5.jpeg")?.decode()?));
+	// images.push(("0", ImageReader::open("/home/a/Documents/originalDog.jpeg")?.decode()?));
+	images.push(("1", ImageReader::open("/home/a/app/dog6.jpeg")?.decode()?));
+	images.push(("2", ImageReader::open("/home/a/app/dog7.jpeg")?.decode()?));
 	// images.push(("3", ImageReader::open("/home/a/app/dog6.jpeg")?.decode()?));
 
-	for i in 0..images.len() {
+	for i in 0..images.len()-1 {
 		let (name, image) = &images[i];
 		let debug_output = format!("image dubug output = {:?}", image);
 		let image_bytes = image.as_bytes();
@@ -582,16 +615,21 @@ pub fn compress_image(image_name: String) -> Result<String, Error> {
 				let second_image_bytes = second_image.as_bytes();
 				let mut True = 0;
 				let mut False = 0;
+				println!("indexs:");
 				for i in 0..image_bytes.len() {
 					let byte1 = image_bytes[i];
 					let byte2 = second_image_bytes[i];
 					if byte1 == byte2 {
 						True += 1;
 					} else {
-						False += 1;
+						if False < 100 {
+							print!("{},", i);
+						}
+						False += 1
 					}
 				}
-				println!("{} VS {} = {}T/{}F", name, second_name, True, False);
+				println!(";");
+				println!("{} VS {} = {}/{}", name, second_name, True, image_bytes.len());
 			}
 		}
 	}
