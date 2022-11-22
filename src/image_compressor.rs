@@ -1,12 +1,13 @@
 use crate::error::Error;
-
+use crate::marker::Marker;
 use image::io::Reader as ImageReader;
 use image::codecs::jpeg::JpegEncoder;
 use std::fs::File;
 use std::sync::{Arc, Mutex};
-use std::io::{stdout, stdin};
+use std::io::{stdout, stdin, BufReader, Read};
 use std::f64::INFINITY;
 use std::io::Write;
+use jpeg;
 
 // use turbojpeg;
 
@@ -14,299 +15,388 @@ use std::io::Write;
 
 pub fn compress_image(image_name: String) -> Result<String, Error> {
 	println!("image_name = {}", image_name);
-	// let img = ImageReader::open("/home/a/Documents/originalDog.jpeg")?.decode()?;
-	// let weights: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
-	// let values: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
-	// let raw_val: Arc<Mutex<Vec<f32>>> = Arc::new(Mutex::new(Vec::new()));
-	// let roundup: Arc<Mutex<Vec<bool>>> = Arc::new(Mutex::new(Vec::new()));
-	// let index: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
-	// let mut buffer = File::create("dog2.jpeg")?;
-	// let mut jpeg_encoder = JpegEncoder::new_with_quality(buffer, 92);
-	// jpeg_encoder.encode(img.as_bytes(), img.width(), img.height(), image::ColorType::Rgb8, Some(&|p| {
-	// 	let i = index.lock().unwrap().clone();
-	// 	let mut weight = 255;
-	// 	if (i % 3) as f32 != 0.0 {
-	// 		weight = ((p%1.0)*100.0).abs() as u8;
-	// 		if weight >= 50 {
-	// 			weight -= 50;
-	// 			roundup.lock().unwrap().push(true);
-	// 		} else {
-	// 			weight = 50 - weight;
-	// 			roundup.lock().unwrap().push(false);
-	// 		}
-	// 		weights.lock().unwrap().push(weight+1);
-	// 		values.lock().unwrap().push(p.round() as u8 & (1 << 0) as u8);
-	// 		raw_val.lock().unwrap().push(p);
-	// 	}
-	// 	*index.lock().unwrap() += 1;
-	// 	0.0
-	// }));
-	// println!("weights = {}", weights.lock().unwrap().len());
+	let img = ImageReader::open("/home/a/Documents/originalDog.jpeg")?.decode()?;
+	let weights: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
+	let values: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
+	let raw_val: Arc<Mutex<Vec<f32>>> = Arc::new(Mutex::new(Vec::new()));
+	let roundup: Arc<Mutex<Vec<bool>>> = Arc::new(Mutex::new(Vec::new()));
+	let index: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
+	let mut buffer = File::create("dog2.jpeg")?;
+	let mut jpeg_encoder = JpegEncoder::new_with_quality(buffer, 92);
+	jpeg_encoder.encode(img.as_bytes(), img.width(), img.height(), image::ColorType::Rgb8, Some(&|p| {
+		let i = index.lock().unwrap().clone();
+		let mut weight = 255;
+		if (i % 3) as f32 != 0.0 {
+			weight = ((p%1.0)*100.0).abs() as u8;
+			if weight >= 50 {
+				weight -= 50;
+				roundup.lock().unwrap().push(true);
+			} else {
+				weight = 50 - weight;
+				roundup.lock().unwrap().push(false);
+			}
+			weights.lock().unwrap().push(weight+1);
+			values.lock().unwrap().push(p.round() as u8 & (1 << 0) as u8);
+			raw_val.lock().unwrap().push(p);
+		}
+		*index.lock().unwrap() += 1;
+		0.0
+	}));
+	println!("weights = {}", weights.lock().unwrap().len());
 
-	// // for i in 0..200 {
-	// // 	println!("v = {}, rv = {}, w = {}", values.lock().unwrap()[i], raw_val.lock().unwrap()[i], weights.lock().unwrap()[i]);
-	// // }
-
-
-
-	// let mut cover_object: Vec<u8> = values.lock().unwrap().clone(); //cover_object vector 
-	// let mut rounds: Vec<bool> = roundup.lock().unwrap().clone();
-	// // let mut full_image: Vec<u8> = Vec::new(); // the entire image vector
-	// let mut cover_weights: Vec<u8> = weights.lock().unwrap().clone(); //weights for each cover_object bit
-	// // let jpeg_data = std::fs::read("./dog.jpeg").expect("failed to read image");
-
-
-	// let mut s = String::new(); //Create message string
- //    print!("Please enter some text: "); //Print to console
- //    let _=stdout().flush(); //new line for console
- //    stdin().read_line(&mut s).expect("Did not enter a correct string"); //Grab message
- //    s = s.trim().to_string();
-
-	// let mut message = Vec::<u64>::new(); //create message vector
-	// for m in s.bytes() { //loop through bytes of the message string
-	// 	let mut binary = format!("{m:b}"); //convert bytes to bits
-	// 	for _ in 0..(8-binary.len()) { //bad binary to proper 8 bit form
-	// 		let filler: String = String::from("0"); //create a 0 string
-	// 		binary = filler+&binary //pad binary
-	// 	}
-	// 	for i in binary.chars() { //grab each bit of the binary string
-	// 		message.push(i.to_string().parse::<u64>().unwrap()); //parse binary into a u64 int and push to message vector
-	// 	}
+	// for i in 0..200 {
+	// 	println!("v = {}, rv = {}, w = {}", values.lock().unwrap()[i], raw_val.lock().unwrap()[i], weights.lock().unwrap()[i]);
 	// }
-	// print!("message: ");
-	// for i in 0..message.len() {
-	// 	print!("{}, ", message[i]);
-	// }
-	// println!(";");
+
+
+
+	let mut cover_object: Vec<u8> = values.lock().unwrap().clone(); //cover_object vector 
+	let mut rounds: Vec<bool> = roundup.lock().unwrap().clone();
+	// let mut full_image: Vec<u8> = Vec::new(); // the entire image vector
+	let mut cover_weights: Vec<u8> = weights.lock().unwrap().clone(); //weights for each cover_object bit
+	// let jpeg_data = std::fs::read("./dog.jpeg").expect("failed to read image");
+
+
+	let mut s = String::new(); //Create message string
+    print!("Please enter some text: "); //Print to console
+    let _=stdout().flush(); //new line for console
+    stdin().read_line(&mut s).expect("Did not enter a correct string"); //Grab message
+    s = s.trim().to_string();
+
+	let mut message = Vec::<u64>::new(); //create message vector
+	for m in s.bytes() { //loop through bytes of the message string
+		let mut binary = format!("{m:b}"); //convert bytes to bits
+		for _ in 0..(8-binary.len()) { //bad binary to proper 8 bit form
+			let filler: String = String::from("0"); //create a 0 string
+			binary = filler+&binary //pad binary
+		}
+		for i in binary.chars() { //grab each bit of the binary string
+			message.push(i.to_string().parse::<u64>().unwrap()); //parse binary into a u64 int and push to message vector
+		}
+	}
+	print!("message: ");
+	for i in 0..message.len() {
+		print!("{}, ", message[i]);
+	}
+	println!(";");
 	
-	// while cover_object.len()%message.len() != 0 { //trim cover_object to be a multiple of the message vector
-	// 	cover_object.pop(); //pop the end off the cover_object
-	// }
-	// println!("cover_object.len() = {}", cover_object.len());
-	// println!("message.len() = {}", message.len());
-	// let sub_width = cover_object.len()/message.len(); //rate of the encoding or the width of the sub matrix H
- //    let sub_height: usize = 4; //performance parameter
- //    let h = 2_u64.pow(sub_height as u32); //2^h
- //    let mut sub_h: Vec<Vec<u64>> = Vec::new(); //create the sub_h or h_hat vector
- //    for i in 0..sub_height {
- //    	sub_h.push(Vec::new());
- //    	for _ in 0..sub_width {
- //    		if rand::random() { //randomly push a zero or one
- //    			sub_h[i].push(1); 
- //    		} else {
- //    			sub_h[i].push(0);
- //    		}
- //    	} 
- //    }
+	while cover_object.len()%message.len() != 0 { //trim cover_object to be a multiple of the message vector
+		cover_object.pop(); //pop the end off the cover_object
+	}
+	println!("cover_object.len() = {}", cover_object.len());
+	println!("message.len() = {}", message.len());
+	let sub_width = cover_object.len()/message.len(); //rate of the encoding or the width of the sub matrix H
+    let sub_height: usize = 4; //performance parameter
+    let h = 2_u64.pow(sub_height as u32); //2^h
+    let mut sub_h: Vec<Vec<u64>> = Vec::new(); //create the sub_h or h_hat vector
+    for i in 0..sub_height {
+    	sub_h.push(Vec::new());
+    	for _ in 0..sub_width {
+    		if rand::random() { //randomly push a zero or one
+    			sub_h[i].push(1); 
+    		} else {
+    			sub_h[i].push(0);
+    		}
+    	} 
+    }
 
- //    let mut sub_ch: Vec<Vec<u64>> = Vec::new(); //create the column oriented sub_h or h_hat
- //    for i in 0..sub_width {
- //    	sub_ch.push(Vec::new());
- //    	for ii in 0..sub_height {
- //    		sub_ch[i].push(sub_h[ii][i]);
- //    	}
- //    }
+    let mut sub_ch: Vec<Vec<u64>> = Vec::new(); //create the column oriented sub_h or h_hat
+    for i in 0..sub_width {
+    	sub_ch.push(Vec::new());
+    	for ii in 0..sub_height {
+    		sub_ch[i].push(sub_h[ii][i]);
+    	}
+    }
 
- //    let mut ph_hat: Vec<Vec<u64>> = Vec::new(); //A vector of vectors, the first of which contains the int format for each column of sub_h or h_hat, the remaining vectors contain the trimed columns based on the extended H. 
- //    for i in 0..sub_height { //The number of trimed column blocks
- //    	ph_hat.push(Vec::new());
- //    	for ii in 0..sub_width {
- //    		ph_hat[i].push(0);
- //    		for iii in 0..(sub_height-i) { //the number of bits per trimmed column
- //    			ph_hat[i][ii] += sub_ch[ii][iii]*2_u64.pow(iii as u32); //binary to int
- //    		}
- //    	}
- //    }
+    let mut ph_hat: Vec<Vec<u64>> = Vec::new(); //A vector of vectors, the first of which contains the int format for each column of sub_h or h_hat, the remaining vectors contain the trimed columns based on the extended H. 
+    for i in 0..sub_height { //The number of trimed column blocks
+    	ph_hat.push(Vec::new());
+    	for ii in 0..sub_width {
+    		ph_hat[i].push(0);
+    		for iii in 0..(sub_height-i) { //the number of bits per trimmed column
+    			ph_hat[i][ii] += sub_ch[ii][iii]*2_u64.pow(iii as u32); //binary to int
+    		}
+    	}
+    }
  
- //    let ext_height = message.len(); //extended matrix H height
- //    let ext_width = cover_object.len(); //extended matrix W width
- //    println!("sub_width = {}", sub_width);
- //    let b = ext_width/sub_width; //Number of copies of sub_h or h_hat in the extended matrix. Includes trimmed blocks.
+    let ext_height = message.len(); //extended matrix H height
+    let ext_width = cover_object.len(); //extended matrix W width
+    println!("sub_width = {}", sub_width);
+    let b = ext_width/sub_width; //Number of copies of sub_h or h_hat in the extended matrix. Includes trimmed blocks.
 
 
- //    let mut ext_h: Vec<Vec<u64>> = Vec::new(); //extended matrix
- //    for i in 0..(ext_height) {
- //    	ext_h.push(Vec::new());
- //    	for _ in 0..ext_width {
- //    		ext_h[i].push(0);
- //    	}
- //    }
+    let mut ext_h: Vec<Vec<u64>> = Vec::new(); //extended matrix
+    for i in 0..(ext_height) {
+    	ext_h.push(Vec::new());
+    	for _ in 0..ext_width {
+    		ext_h[i].push(0);
+    	}
+    }
 
- //    let mut ext_ch: Vec<Vec<u64>> = Vec::new(); //extended matrix column oriented
- //    for i in 0..(ext_width) {
- //    	ext_ch.push(Vec::new());
- //    	for _ in 0..ext_height {
- //    		ext_ch[i].push(0);
- //    	}
- //    }
+    let mut ext_ch: Vec<Vec<u64>> = Vec::new(); //extended matrix column oriented
+    for i in 0..(ext_width) {
+    	ext_ch.push(Vec::new());
+    	for _ in 0..ext_height {
+    		ext_ch[i].push(0);
+    	}
+    }
 
- //    let mut row = 0;
- //    let mut column = 0;
- //    'B: for _ in 0..(ext_width/sub_width) { //Builds the extended matrix
- //    	'H: for ii in 0..sub_height {
- //    		for iii in 0..sub_width {
- //    			if row+ii >= ext_height {
- //    				break 'H
- //    			}
- //    			if column+iii >= ext_width {
- //    				break 'B
- //    			}
- //    			ext_h[row+ii][column+iii] = sub_h[ii][iii];
- //    		}
- //    	}
- //    	row += 1;
-	// 	column = column+sub_width;
- //    }
+    let mut row = 0;
+    let mut column = 0;
+    'B: for _ in 0..(ext_width/sub_width) { //Builds the extended matrix
+    	'H: for ii in 0..sub_height {
+    		for iii in 0..sub_width {
+    			if row+ii >= ext_height {
+    				break 'H
+    			}
+    			if column+iii >= ext_width {
+    				break 'B
+    			}
+    			ext_h[row+ii][column+iii] = sub_h[ii][iii];
+    		}
+    	}
+    	row += 1;
+		column = column+sub_width;
+    }
     
- //    for i in 0..ext_h[0].len() { //Builds the column oriented extended matrix
- //    	for ii in 0..ext_h.len() {
- //    		ext_ch[i][ii] = ext_h[ii][i];
- //    	}
- //    }
+    for i in 0..ext_h[0].len() { //Builds the column oriented extended matrix
+    	for ii in 0..ext_h.len() {
+    		ext_ch[i][ii] = ext_h[ii][i];
+    	}
+    }
 
-	// fn matrix_multi(s: &mut Vec<u64>, x: &mut Vec<u8>, ch: &Vec<Vec<u64>>, ext_height: usize) { //multiplys a vector of length equal to that of the cover object against the extended matrix. The result is a syndrom the length of the message.
-	// 	for _ in 0..ext_height {
-	// 		s.push(0);
-	// 	}
-	// 	for i in 0..ch.len() {
-	// 		for ii in 0..ch[0].len() {
-	// 			// if (i == (ch.len()-1)) {
-	// 			// 	println!("ch[{}][{}] = {}, x[{}] = {}", i, ii, ch[i][ii], ii, x[ii]);
-	// 			// }
-	// 			s[i] = (s[i]+((x[ii] as u64*ch[i][ii])%2))%2;
-	// 		}
-	// 	}
-	// 	for i in 0..ext_height {
-	// 		s[i] = s[i]%2;
-	// 	}
-	// }
+	fn matrix_multi(s: &mut Vec<u64>, x: &mut Vec<u8>, ch: &Vec<Vec<u64>>, ext_height: usize) { //multiplys a vector of length equal to that of the cover object against the extended matrix. The result is a syndrom the length of the message.
+		for _ in 0..ext_height {
+			s.push(0);
+		}
+		for i in 0..ch.len() {
+			for ii in 0..ch[0].len() {
+				// if (i == (ch.len()-1)) {
+				// 	println!("ch[{}][{}] = {}, x[{}] = {}", i, ii, ch[i][ii], ii, x[ii]);
+				// }
+				s[i] = (s[i]+((x[ii] as u64*ch[i][ii])%2))%2;
+			}
+		}
+		for i in 0..ext_height {
+			s[i] = s[i]%2;
+		}
+	}
 
 
 
-	// let mut path: Vec<Vec<u64>> = Vec::new(); //path vector of vectors contains a vector of each state for each column.
-	// for i in 0..cover_object.len() {
-	// 	path.push(Vec::new());
-	// 	for _ in 0..h {
-	// 		path[i].push(0);
-	// 	}
-	// }
-	// let mut wght: Vec<f64> = Vec::new(); //contains the cost per path
-	// wght.push(0.0);
-	// for _ in 1..h {
-	// 	wght.push(INFINITY);
-	// }
-	// let mut y: Vec<u8> = Vec::new(); //stego cover object
-	// for _ in 0..cover_object.len() {
-	// 	y.push(0);
-	// }
-	// let mut indx = 0;
-	// let mut indm = 0;
+	let mut path: Vec<Vec<u64>> = Vec::new(); //path vector of vectors contains a vector of each state for each column.
+	for i in 0..cover_object.len() {
+		path.push(Vec::new());
+		for _ in 0..h {
+			path[i].push(0);
+		}
+	}
+	let mut wght: Vec<f64> = Vec::new(); //contains the cost per path
+	wght.push(0.0);
+	for _ in 1..h {
+		wght.push(INFINITY);
+	}
+	let mut y: Vec<u8> = Vec::new(); //stego cover object
+	for _ in 0..cover_object.len() {
+		y.push(0);
+	}
+	let mut indx = 0;
+	let mut indm = 0;
 
-	// //FORWARD RUN
-	// for _ in 1..((b+1) as usize) { //For each copy of sub_h in ext_h
-	// 	for j in 0..((sub_width) as usize) { //for each column
-	// 		let mut newwght: Vec<f64> = Vec::new();
-	// 		for _ in 0..h {
-	// 			newwght.push(INFINITY);
-	// 		}
-	// 		for k in 0..(h as usize) { //for each state 
-	// 			let mut phindex = 0; 
-	// 			if (indm+sub_height) > b { //Decides if the current column is a trimed version of sub_h or h_hat
-	// 				phindex = (indm+sub_height)-b;
-	// 			}
-	// 			let w0 = wght[k] + ((cover_object[indx]*cover_weights[indx]) as f64); //weight of not adding the current column of sub_h or h_hat
-	// 			let w1 = wght[((k as u64)^ph_hat[phindex][(j%sub_width) as usize]) as usize] + ((((1+cover_object[indx])%2)*cover_weights[indx]) as f64); //weight of adding the current column of sub_h or h_hat
-	// 			path[indx][k] = if w1 < w0 { //recordes the available paths for this state
-	// 				1
-	// 			} else {
-	// 				0
-	// 			};
-	// 			// println!("j = {}, w0 = {}, w1 = {}, p[{}][{}] = {}", j, w0, w1, indx, k, path[indx][k]);
-	// 			newwght[k] = w0.min(w1); //decides if adding or not addingh the column of h_hat was cheeper
-	// 		}
-	// 		indx += 1;
-	// 		wght = newwght;
-	// 	}
-	// 	for j in 0..h/2 {
-	// 		// println!("{}, {}", indm, message[indm]);
-	// 		wght[j as usize] = wght[((2*j) + message[indm]) as usize]; // squashes the weights by half taking either the even node or the odd node based on the message bit
-	// 	}
-	// 	for j in h/2..h {
-	// 		wght[j as usize] = INFINITY; //zeros out the second half after the squash
-	// 	}
-	// 	indm += 1;
-	// }
-	// let embeding_cost = wght[0]; 
-	// println!("embeding cost = {}", embeding_cost);
+	//FORWARD RUN
+	for _ in 1..((b+1) as usize) { //For each copy of sub_h in ext_h
+		for j in 0..((sub_width) as usize) { //for each column
+			let mut newwght: Vec<f64> = Vec::new();
+			for _ in 0..h {
+				newwght.push(INFINITY);
+			}
+			for k in 0..(h as usize) { //for each state 
+				let mut phindex = 0; 
+				if (indm+sub_height) > b { //Decides if the current column is a trimed version of sub_h or h_hat
+					phindex = (indm+sub_height)-b;
+				}
+				let w0 = wght[k] + ((cover_object[indx]*cover_weights[indx]) as f64); //weight of not adding the current column of sub_h or h_hat
+				let w1 = wght[((k as u64)^ph_hat[phindex][(j%sub_width) as usize]) as usize] + ((((1+cover_object[indx])%2)*cover_weights[indx]) as f64); //weight of adding the current column of sub_h or h_hat
+				path[indx][k] = if w1 < w0 { //recordes the available paths for this state
+					1
+				} else {
+					0
+				};
+				// println!("j = {}, w0 = {}, w1 = {}, p[{}][{}] = {}", j, w0, w1, indx, k, path[indx][k]);
+				newwght[k] = w0.min(w1); //decides if adding or not addingh the column of h_hat was cheeper
+			}
+			indx += 1;
+			wght = newwght;
+		}
+		for j in 0..h/2 {
+			// println!("{}, {}", indm, message[indm]);
+			wght[j as usize] = wght[((2*j) + message[indm]) as usize]; // squashes the weights by half taking either the even node or the odd node based on the message bit
+		}
+		for j in h/2..h {
+			wght[j as usize] = INFINITY; //zeros out the second half after the squash
+		}
+		indm += 1;
+	}
+	let embeding_cost = wght[0]; 
+	println!("embeding cost = {}", embeding_cost);
 
-	// //BACKWARDS RUN
-	// let mut state: u64 = message[(indm-1) as usize]; //current state of the trellis //message[(indm-1) as usize]
-	// for _ie in 1..((b+1) as usize) { //for each copy of sub_h or h_hat
-	// 	indm -= 1;
-	// 	// let _i = b-ie; // To go backwards
-	// 	for je in 1..((sub_width+1) as usize) { //for each column
-	// 		indx -= 1;
-	// 		let j = sub_width-je; // To go backwards
-	// 		y[indx] = path[indx][state as usize] as u8; //set the stego object bit for this state
-	// 		if y[indx] != cover_object[indx] {
-	// 			println!("differ");
-	// 			if rounds[indx] {
-	// 				rounds[indx] = false
-	// 			} else {
-	// 				rounds[indx] = true
-	// 			}
+	//BACKWARDS RUN
+	let mut state: u64 = message[(indm-1) as usize]; //current state of the trellis //message[(indm-1) as usize]
+	for _ie in 1..((b+1) as usize) { //for each copy of sub_h or h_hat
+		indm -= 1;
+		// let _i = b-ie; // To go backwards
+		for je in 1..((sub_width+1) as usize) { //for each column
+			indx -= 1;
+			let j = sub_width-je; // To go backwards
+			y[indx] = path[indx][state as usize] as u8; //set the stego object bit for this state
+			if y[indx] != cover_object[indx] {
+				println!("differ");
+				if rounds[indx] {
+					rounds[indx] = false
+				} else {
+					rounds[indx] = true
+				}
 
-	// 		}
-	// 		let mut phindex = 0;
-	// 		if (indm+sub_height) > b { //decides if we need to use a trimed copy of h_hat or sub_h
-	// 			phindex = (indm+sub_height)-b; 
-	// 		}
-	// 		state = state^((y[indx] as u64*ph_hat[phindex][(j%sub_width) as usize])); //updates the state based on cheepest choice
-	// 	}
-	// 	if indm == 0 {
-	// 		break
-	// 	}
-	// 	state = (2*state + message[indm-1 as usize]) % h; //updates the state to account for the pruning
-	// }
+			}
+			let mut phindex = 0;
+			if (indm+sub_height) > b { //decides if we need to use a trimed copy of h_hat or sub_h
+				phindex = (indm+sub_height)-b; 
+			}
+			state = state^((y[indx] as u64*ph_hat[phindex][(j%sub_width) as usize])); //updates the state based on cheepest choice
+		}
+		if indm == 0 {
+			break
+		}
+		state = (2*state + message[indm-1 as usize]) % h; //updates the state to account for the pruning
+	}
 
-	// let mut syndrom = Vec::new();
-	// matrix_multi(&mut syndrom, &mut y,  &ext_h, ext_height);
-	// assert!(syndrom == message); // Assert virtubi succeded
+	let mut syndrom = Vec::new();
+	matrix_multi(&mut syndrom, &mut y,  &ext_h, ext_height);
+	assert!(syndrom == message); // Assert virtubi succeded
 
-	// //WRITE IMAGE
-	// let index: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
-	// let indx: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
-	// let diffind: Arc<Mutex<Vec<usize>>> = Arc::new(Mutex::new(Vec::new()));
-	// let mut buffer = File::create("dog2.jpeg")?;
-	// let test_round = roundup.lock().unwrap().clone();
-	// let mut jpeg_encoder = JpegEncoder::new_with_quality(buffer, 92);
-	// jpeg_encoder.encode(img.as_bytes(), img.width(), img.height(), image::ColorType::Rgb8, Some(&|p| {
-	// 	let i = index.lock().unwrap().clone();
-	// 	let mut weight = 255;
-	// 	if (i % 3) as f32 != 0.0 {
-	// 		let ind = *indx.lock().unwrap() as usize;
-	// 		if rounds[ind] != test_round[ind] {
-	// 			println!("+iffer {}, {}, {}, {}, {}, {}", ind, y[ind], cover_object[ind], rounds[ind], test_round[ind], p);
-	// 			diffind.lock().unwrap().push(ind);
+	//WRITE IMAGE
+	let index: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
+	let indx: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
+	let diffind: Arc<Mutex<Vec<usize>>> = Arc::new(Mutex::new(Vec::new()));
+	let mut buffer = File::create("dog2.jpeg")?;
+	let test_round = roundup.lock().unwrap().clone();
+	let mut jpeg_encoder = JpegEncoder::new_with_quality(buffer, 92);
+	jpeg_encoder.encode(img.as_bytes(), img.width(), img.height(), image::ColorType::Rgb8, Some(&|p| {
+		let i = index.lock().unwrap().clone();
+		let mut weight = 255;
+		if (i % 3) as f32 != 0.0 {
+			let ind = *indx.lock().unwrap() as usize;
+			if rounds[ind] != test_round[ind] {
+				println!("+iffer {}, {}, {}, {}, {}, {}", ind, y[ind], cover_object[ind], rounds[ind], test_round[ind], p);
+				diffind.lock().unwrap().push(ind);
 
-	// 		}
-	// 		if rounds[*indx.lock().unwrap() as usize] {
-	// 			*indx.lock().unwrap() += 1;
-	// 			*index.lock().unwrap() += 1;
-	// 			return p.ceil()
-	// 		} else {
-	// 			*indx.lock().unwrap() += 1;
-	// 			*index.lock().unwrap() += 1;
-	// 			return p.floor()
-	// 		}
-	// 	}
-	// 	*index.lock().unwrap() += 1;
-	// 	p.round()
-	// }));
+			}
+			if rounds[*indx.lock().unwrap() as usize] {
+				*indx.lock().unwrap() += 1;
+				*index.lock().unwrap() += 1;
+				return p.ceil()
+			} else {
+				*indx.lock().unwrap() += 1;
+				*index.lock().unwrap() += 1;
+				return p.floor()
+			}
+		}
+		*index.lock().unwrap() += 1;
+		p.round()
+	}));
 
-	// let diffind = diffind.lock().unwrap().clone();
+	let diffind = diffind.lock().unwrap().clone();
 
 	// //READ IMAGE TO CHECK SYNDROM
+	println!("D----------------------------------");
+	// let file = File::open("dog2.jpeg").expect("failed to open file");
+    // let mut decoder = jpeg::Decoder::new(BufReader::new(file));
+    // let pixels = decoder.decode().expect("failed to decode image");
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	let f = File::open("dog2.jpeg")?;
+    let mut reader = BufReader::new(f);
+    let mut buffer = Vec::new();
+    reader.read_to_end(&mut buffer)?;
+
+    let mut index = 0;
+    let mut current_segment = 0;
+    //Debug
+    let hexfile = hex::encode(&buffer);
+    let hexsegment = &hexfile[0..20];
+    println!("file: {};", hexsegment);
+    //debug
+    let mut data = Vec::new();
+    let mut stage = 0;
+    //0 start
+    //1 got start of image
+    let mut state = 0;
+    //0 read marker
+    //1 read length and parse segment
+    let mut frame_type = 100;
+    loop {
+    	println!("-------i={}------b={}--------",index, buffer[index]);
+    	if buffer[index] == 0xff {
+			//Start of new Segment
+			println!("seg = {}", buffer[index+1]);
+			let seg = match Marker::from_u8(buffer[index+1]) {
+				Some(Marker::SOF(type)) => {
+					frame_type = type;
+					println!("frame_type = {}", type);
+					index += 2;
+					Marker::SOF
+				},
+				Some(marker) => {
+					index += 2;
+					marker
+				},
+				None => {
+					panic!("Could not understand marker provided");
+				}
+			};
+			if seg.has_length() {
+				let base: u16 = 2; // an explicit type is required
+				let length = ((buffer[index] as u16 * base.pow(8)) + buffer[index+1] as u16) as usize;
+				println!("length of segment {} = {}", current_segment, length);
+				let seg_data = &buffer[index+2..index+length];
+				println!("data = {}", hex::encode(seg_data));
+				data.push((current_segment, seg_data));
+				state = 0;
+				index += length;
+			}
+		}
+    }
+    
+	// print!("file: ");
+ //    for i in 0..buffer.len() {
+ //    	if buffer[i] == 0xff {
+
+ //    	}
+ //        print!("{},", value);
+ //    }
+	// println!(";");
+
+
+
+
+
+
+
+
+
 	// let stego_ob: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
 	// let mut buffer = File::create("garbage.jpeg")?;
 	// let img = ImageReader::open("dog2.jpeg")?.decode()?;
@@ -437,26 +527,26 @@ fn pause() {
 
 
 
-	let img = ImageReader::open("/home/a/app/dog5.jpeg")?.decode()?;
-	let mut buffer = File::create("/home/a/app/dog6.jpeg")?;
-	let mut jpeg_encoder = JpegEncoder::new_with_quality(buffer, 100);
-	let index: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
-	let values: Arc<Mutex<Vec<f32>>> = Arc::new(Mutex::new(Vec::new()));
-	jpeg_encoder.encode(img.as_bytes(), img.width(), img.height(), image::ColorType::Rgb8, None);
+	// let img = ImageReader::open("/home/a/app/dog5.jpeg")?.decode()?;
+	// let mut buffer = File::create("/home/a/app/dog6.jpeg")?;
+	// let mut jpeg_encoder = JpegEncoder::new_with_quality(buffer, 100);
+	// let index: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
+	// let values: Arc<Mutex<Vec<f32>>> = Arc::new(Mutex::new(Vec::new()));
+	// jpeg_encoder.encode(img.as_bytes(), img.width(), img.height(), image::ColorType::Rgb8, None);
 	
 
-	pause();
-	println!("------------------------------------------------------");
-	// use std::io::BufReader;
-	// use image::io::Reader;
-	// let reader = Reader::open("/home/a/app/dog5.jpeg")?;
-	// println!("reader.format = {}", reader.format().unwrap() == image::ImageFormat::Jpeg);
-	let img = ImageReader::open("/home/a/app/dog6.jpeg")?.decode()?;
-	let mut buffer = File::create("/home/a/app/dog7.jpeg")?;
-	let mut jpeg_encoder = JpegEncoder::new_with_quality(buffer, 100);
-	let index: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
-	let valuex: Arc<Mutex<Vec<f32>>> = Arc::new(Mutex::new(Vec::new()));
-	jpeg_encoder.encode(img.as_bytes(), img.width(), img.height(), image::ColorType::Rgb8, None);
+	// pause();
+	// println!("------------------------------------------------------");
+	// // use std::io::BufReader;
+	// // use image::io::Reader;
+	// // let reader = Reader::open("/home/a/app/dog5.jpeg")?;
+	// // println!("reader.format = {}", reader.format().unwrap() == image::ImageFormat::Jpeg);
+	// let img = ImageReader::open("/home/a/app/dog6.jpeg")?.decode()?;
+	// let mut buffer = File::create("/home/a/app/dog7.jpeg")?;
+	// let mut jpeg_encoder = JpegEncoder::new_with_quality(buffer, 100);
+	// let index: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
+	// let valuex: Arc<Mutex<Vec<f32>>> = Arc::new(Mutex::new(Vec::new()));
+	// jpeg_encoder.encode(img.as_bytes(), img.width(), img.height(), image::ColorType::Rgb8, None);
 
 	// let v1 = values.lock().unwrap().clone();
 	// let v2 = valuex.lock().unwrap().clone();
@@ -598,40 +688,40 @@ fn pause() {
 	// let mut buffer = File::create("/home/a/app/dog6.jpeg")?;
 	// let mut jpeg_encoder = JpegEncoder::new_with_quality(buffer, 100);
 	// jpeg_encoder.encode(img.as_bytes(), img.width(), img.height(), image::ColorType::Rgb8, None);
-	println!("-----------------------");
-	let mut images = Vec::new();
-	// images.push(("0", ImageReader::open("/home/a/Documents/originalDog.jpeg")?.decode()?));
-	images.push(("1", ImageReader::open("/home/a/app/dog6.jpeg")?.decode()?));
-	images.push(("2", ImageReader::open("/home/a/app/dog7.jpeg")?.decode()?));
-	// images.push(("3", ImageReader::open("/home/a/app/dog6.jpeg")?.decode()?));
+	// println!("-----------------------");
+	// let mut images = Vec::new();
+	// // images.push(("0", ImageReader::open("/home/a/Documents/originalDog.jpeg")?.decode()?));
+	// images.push(("1", ImageReader::open("/home/a/app/dog6.jpeg")?.decode()?));
+	// images.push(("2", ImageReader::open("/home/a/app/dog7.jpeg")?.decode()?));
+	// // images.push(("3", ImageReader::open("/home/a/app/dog6.jpeg")?.decode()?));
 
-	for i in 0..images.len()-1 {
-		let (name, image) = &images[i];
-		let debug_output = format!("image dubug output = {:?}", image);
-		let image_bytes = image.as_bytes();
-		for x in 0..images.len() {
-			if i != x {
-				let (second_name, second_image) = &images[x];
-				let second_image_bytes = second_image.as_bytes();
-				let mut True = 0;
-				let mut False = 0;
-				println!("indexs:");
-				for i in 0..image_bytes.len() {
-					let byte1 = image_bytes[i];
-					let byte2 = second_image_bytes[i];
-					if byte1 == byte2 {
-						True += 1;
-					} else {
-						if False < 100 {
-							print!("{},", i);
-						}
-						False += 1
-					}
-				}
-				println!(";");
-				println!("{} VS {} = {}/{}", name, second_name, True, image_bytes.len());
-			}
-		}
-	}
+	// for i in 0..images.len()-1 {
+	// 	let (name, image) = &images[i];
+	// 	let debug_output = format!("image dubug output = {:?}", image);
+	// 	let image_bytes = image.as_bytes();
+	// 	for x in 0..images.len() {
+	// 		if i != x {
+	// 			let (second_name, second_image) = &images[x];
+	// 			let second_image_bytes = second_image.as_bytes();
+	// 			let mut True = 0;
+	// 			let mut False = 0;
+	// 			println!("indexs:");
+	// 			for i in 0..image_bytes.len() {
+	// 				let byte1 = image_bytes[i];
+	// 				let byte2 = second_image_bytes[i];
+	// 				if byte1 == byte2 {
+	// 					True += 1;
+	// 				} else {
+	// 					if False < 100 {
+	// 						print!("{},", i);
+	// 					}
+	// 					False += 1
+	// 				}
+	// 			}
+	// 			println!(";");
+	// 			println!("{} VS {} = {}/{}", name, second_name, True, image_bytes.len());
+	// 		}
+	// 	}
+	// }
 	Ok("Completed with out problems".to_string())
 }
