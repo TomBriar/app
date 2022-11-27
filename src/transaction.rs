@@ -337,6 +337,7 @@ fn get_witness_script(transa: &Transaction,  rpc: &bitcoincore_rpc::Client, reco
 					});
 				}
 				let prevouts = Prevouts::All(&outputs);
+				println!("lt = {}", transaction.lock_time);
 				let mut shc = bitcoin::util::sighash::SighashCache::new(&transaction);
 				let sig_hash = shc.taproot_key_spend_signature_hash(i, &prevouts, sig_hash_type).expect("Could not get sighash");
 				let message = secp256k1::Message::from_slice(&sig_hash).expect("Could Not Get Message From SigHash");
@@ -347,6 +348,8 @@ fn get_witness_script(transa: &Transaction,  rpc: &bitcoincore_rpc::Client, reco
 				let ctx = Secp256k1::new();
 				if ctx.verify_schnorr(&signature, &message, &x_only_pubkey).is_ok() {
 					find_lock_time = false;
+					result.2 = transaction.lock_time;
+					println!("found");
 				}
 			} else {
 				witness.push(&signature.as_ref());
@@ -369,9 +372,8 @@ fn get_witness_script(transa: &Transaction,  rpc: &bitcoincore_rpc::Client, reco
 }
 
 
-fn deserialize(tx_hex: &String, rpc: &bitcoincore_rpc::Client, trans: Transaction) -> Result<String, Error> {
+pub fn deserialize(tx: &Vec<u8>, rpc: &bitcoincore_rpc::Client, trans: Transaction) -> Result<String, Error> {
 	println!("D----------------------------------");
-	let tx: Vec<u8> = hex::decode(tx_hex).expect("uneaven hex");
 	let mut index = 0;
 
 	//Grab Controll bit (vvl)
@@ -728,6 +730,7 @@ fn deserialize(tx_hex: &String, rpc: &bitcoincore_rpc::Client, trans: Transactio
 	if &control[2..4] == "11" {
 		assert!(!half_finished_inputs.is_empty());
 		let (_, _, lock_time) = get_witness_script(&transaction, rpc, &recoverable_signatures, 0, true, &trans)?;
+		println!("lock_time = {}", lock_time);
 		transaction.lock_time = lock_time;
 		//half_finished_inputs.remove(0);
 	} 
@@ -771,7 +774,7 @@ fn deserialize(tx_hex: &String, rpc: &bitcoincore_rpc::Client, trans: Transactio
 	Ok("done".to_string())
 }
 
-pub fn compress_transaction(tx: &str, rpc: &bitcoincore_rpc::Client) -> Result<String, Error> {
+pub fn serialize(tx: &str, rpc: &bitcoincore_rpc::Client) -> Result<Vec<u8>, Error> {
 	//Declare Result
 	let mut compressed_transaction = Vec::new();
 	//Transaction from hex to bytes
@@ -806,6 +809,7 @@ pub fn compress_transaction(tx: &str, rpc: &bitcoincore_rpc::Client) -> Result<S
 	};
 	println!("coinbase_str = {}", coinbase_str);
 
+	println!("lock_time = {}", transaction.lock_time.to_u32());
 	//If the Lock time is zero we can repersent that as a single bit(Otherwise half compress it)
 	let lock_time_str = match transaction.lock_time.to_u32() {
 		0 => "00",
@@ -1152,8 +1156,7 @@ pub fn compress_transaction(tx: &str, rpc: &bitcoincore_rpc::Client) -> Result<S
 		};
 	}
 
-	let result = hex::encode(compressed_transaction);
-	deserialize(&result, rpc, transaction)?;
+	let result = compressed_transaction;
 	Ok(result)
 }
 

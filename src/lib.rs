@@ -10,12 +10,10 @@ extern crate hex;
 extern crate secp256k1;
 extern crate bitcoincore_rpc;
 
-pub mod compress;
+pub mod transaction;
 pub mod error;
-// pub mod trellis;
 pub mod marker;
-pub mod image_compressor;
-pub mod huffman_coding;
+pub mod stego;
 #[cfg(feature="gui")]
 pub mod gui;
 
