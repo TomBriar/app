@@ -12,7 +12,6 @@ use bitcoin::hashes::hex::FromHex;
 use bitcoin::psbt::Prevouts;
 use bitcoincore_rpc::RpcApi;
 use bitcoin::XOnlyPublicKey;
-// use bitcoincore_rpc_json::GetTransactionResultDetailCategory;
 use crate::error::Error;
 
 use std::fmt;
@@ -198,7 +197,7 @@ fn get_input_type(script: &Script, witness: &Witness, txin: &TxIn, rpc: &bitcoin
 	}
 }
 
-fn get_witness_script(transa: &Transaction,  rpc: &bitcoincore_rpc::Client, recoverable_signatures: &[&[u8]], i: usize, mut find_lock_time: bool, trans: &Transaction) -> Result<(Script, Witness, PackedLockTime), Error> {
+fn get_witness_script(transa: &Transaction,  rpc: &bitcoincore_rpc::Client, recoverable_signatures: &[&[u8]], i: usize, mut find_lock_time: bool) -> Result<(Script, Witness, PackedLockTime), Error> {
 	let mut transaction = transa.clone();
 	println!("First Half Finished Input = {}", i);
 	let mut result = (transaction.input[i].script_sig.clone(), transaction.input[i].witness.clone(), transaction.lock_time);
@@ -372,7 +371,7 @@ fn get_witness_script(transa: &Transaction,  rpc: &bitcoincore_rpc::Client, reco
 }
 
 
-pub fn deserialize(tx: &Vec<u8>, rpc: &bitcoincore_rpc::Client, trans: Transaction) -> Result<String, Error> {
+pub fn deserialize(tx: &Vec<u8>, rpc: &bitcoincore_rpc::Client) -> Result<Transaction, Error> {
 	println!("D----------------------------------");
 	let mut index = 0;
 
@@ -729,60 +728,24 @@ pub fn deserialize(tx: &Vec<u8>, rpc: &bitcoincore_rpc::Client, trans: Transacti
 
 	if &control[2..4] == "11" {
 		assert!(!half_finished_inputs.is_empty());
-		let (_, _, lock_time) = get_witness_script(&transaction, rpc, &recoverable_signatures, 0, true, &trans)?;
+		let (_, _, lock_time) = get_witness_script(&transaction, rpc, &recoverable_signatures, 0, true)?;
 		println!("lock_time = {}", lock_time);
 		transaction.lock_time = lock_time;
 		//half_finished_inputs.remove(0);
 	} 
 	for i in half_finished_inputs {
 		println!("-------------------------{}", i);
-		let (script_sig, witness, _) = get_witness_script(&transaction, rpc, &recoverable_signatures, i, false, &trans)?;
+		let (script_sig, witness, _) = get_witness_script(&transaction, rpc, &recoverable_signatures, i, false)?;
 		transaction.input[i].script_sig = script_sig;
 		transaction.input[i].witness = witness;
 	}
 	
-	println!("transaction == trans = {}", transaction == trans);
-	if transaction != trans {
-		println!("transaction.input == trans.input = {}", transaction.input == trans.input);
-		if transaction.input != trans.input {
-			for a in 0..transaction.input.len() {
-				println!("transaction.input[{}].previous_output == trans.input[{}].previous_output = {}", a, a, transaction.input[a].previous_output == trans.input[a].previous_output);
-				println!("transaction.input[{}].script_sig == trans.input[{}].script_sig = {}", a, a, transaction.input[a].script_sig == trans.input[a].script_sig);
-				if transaction.input[a].script_sig != trans.input[a].script_sig {
-					println!("transaction.input[{}].script_sig = {}", a, transaction.input[a].script_sig);
-					println!("trans.input[{}].script_sig = {}", a, trans.input[a].script_sig);
-				}
-				println!("transaction.input[{}].sequence == trans.input[{}].sequence = {}", a, a, transaction.input[a].sequence == trans.input[a].sequence);
-				println!("transaction.input[{}].witness == trans.input[{}].witness = {}", a, a, transaction.input[a].witness == trans.input[a].witness);
-				if transaction.input[a].witness != trans.input[a].witness {
-					println!("hex::encode(transaction.input[{}].witness.to_vec()[b]): ", a);
-					for b in 0..transaction.input[a].witness.to_vec().len() {
-						println!("	hex::encode(transaction.input[{}].witness.to_vec()[{}]) = {}", a, b, hex::encode(&transaction.input[a].witness.to_vec()[b]));
-					}
-					println!("hex::encode(trans.input[{}].witness.to_vec()[b]): ", a);
-					for b in 0..trans.input[a].witness.to_vec().len() {
-						println!("	hex::encode(trans.input[{}].witness.to_vec()[{}]) = {}", a, b, hex::encode(&trans.input[a].witness.to_vec()[b]));
-					}
-				}
-			}
-		}
-		println!("transaction.output == trans.output = {}", transaction.output == trans.output);
-		println!("transaction.version == trans.version = {}", transaction.version == trans.version);
-		println!("transaction.lock_time == trans.lock_time = {}", transaction.lock_time == trans.lock_time);
-		panic!("Could not compress transaction");
-	}
-	Ok("done".to_string())
+	Ok(transaction)
 }
 
-pub fn serialize(tx: &str, rpc: &bitcoincore_rpc::Client) -> Result<Vec<u8>, Error> {
+pub fn serialize(transaction: &Transaction, rpc: &bitcoincore_rpc::Client) -> Result<Vec<u8>, Error> {
 	//Declare Result
 	let mut compressed_transaction = Vec::new();
-	//Transaction from hex to bytes
-	let bytes = Vec::from_hex(tx)?;
-
-	//Deserialize Transaction
-	let transaction = Transaction::deserialize(&bytes)?;
-
 	//Get the Current Block height
 	// let block_height = rpc.get_block_count()?;
 	

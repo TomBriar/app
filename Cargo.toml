@@ -38,6 +38,7 @@ either = "1.8.0"
 image = { path = "./image" }
 jpeg = {package = "jpeg-decoder", path = "./jpeg-decoder" }
 num-traits = "0.2.15"
+home = "0.5.4"
 
 [features]
 gui = ["dep:iced"]

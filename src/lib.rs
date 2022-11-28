@@ -16,10 +16,10 @@ pub mod marker;
 pub mod stego;
 #[cfg(feature="gui")]
 pub mod gui;
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-    }
-}
+pub mod tests;
+// #[cfg(test)]
+// mod tests {
+//     #[test]
+//     fn it_works() {
+//     }
+// }

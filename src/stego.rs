@@ -61,14 +61,14 @@ pub fn stego(cover_object_untrimmed: &Vec<u8>, cover_weights: &Vec<u8>, message:
     		}
     	} 
     }
-    println!("sub_h:");
-    for i in 0..sub_h.len() {
-    	for x in 0..sub_h[i].len() {
-    		print!("{}, ", sub_h[i][x]);
-    	}
-    	println!(".");
-    }
-    println!(";");
+    // println!("sub_h:");
+    // for i in 0..sub_h.len() {
+    // 	for x in 0..sub_h[i].len() {
+    // 		print!("{}, ", sub_h[i][x]);
+    // 	}
+    // 	println!(".");
+    // }
+    // println!(";");
 
     let mut sub_ch: Vec<Vec<u8>> = Vec::new(); //create the column oriented sub_h or h_hat
     for i in 0..sub_width {

@@ -84,6 +84,7 @@ dependencies = [
  "either",
  "float-ord",
  "hex",
+ "home",
  "iced",
  "image 0.24.4",
  "jpeg-decoder 0.3.0",
@@ -1481,6 +1482,15 @@ name = "hexf-parse"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dfa686283ad6dd069f105e5ab091b04c62850d3e4cf5d67debad1933f55023df"
+
+[[package]]
+name = "home"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "747309b4b440c06d57b0b25f2aee03ee9b5e5397d288c60e21fc709bb98a7408"
+dependencies = [
+ "winapi",
+]
 
 [[package]]
 name = "humantime"
